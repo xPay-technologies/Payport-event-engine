@@ -30,6 +30,7 @@ Your session will expire automatically after 8 hours. Plan accordingly.
 
 ### Step 1: Start Your Assignment
 
+```
 curl -X POST https://YOUR_SERVER_URL/start \
   -H "Content-Type: application/json" \
   -d '{
@@ -40,12 +41,16 @@ curl -X POST https://YOUR_SERVER_URL/start \
 {
   "message": "Assignment started",
   "endsAt": "2026-01-13T18:00:00.000Z"
-}⚠️ **Important**: Each email can only be used once. Make sure you're ready before starting.
+}
+```
+
+⚠️ **Important**: Each email can only be used once. Make sure you're ready before starting.
 
 ### Step 2: Connect to the Event Stream
 
 The backend streams payment events via **Server-Sent Events (SSE)**:
 
+```
 const eventSource = new EventSource(
   'https://YOUR_SERVER_URL/events?email=your.email@example.com'
 );
@@ -53,7 +58,10 @@ const eventSource = new EventSource(
 eventSource.onmessage = (event) => {
   const payment = JSON.parse(event.data);
   console.log('New payment:', payment);
-};### Step 3: Build Your Dashboard
+};
+```
+
+### Step 3: Build Your Dashboard
 
 Use the streaming data to build a real-time dashboard. See requirements below.
 
@@ -61,12 +69,14 @@ Use the streaming data to build a real-time dashboard. See requirements below.
 
 When finished (or when time runs out):
 
+```
 curl -X POST https://YOUR_SERVER_URL/stop \
   -H "Content-Type: application/json" \
   -d '{
     "email": "your.email@example.com",
     "githubRepo": "https://github.com/yourusername/payport-dashboard"
   }'---
+```
 
 ## 📡 API Reference
 
