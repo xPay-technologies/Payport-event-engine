@@ -1,9 +1,11 @@
 export const countries = [
-    { country: "India", currency: "INR" },
-    { country: "USA", currency: "USD" },
+    { country: "US", currency: "USD" },
+    { country: "GB", currency: "GBP" },
+    { country: "Canada", currency: "CAD" },
+    { country: "Australia", currency: "AUD" },
+    { country: "UAE", currency: "AED" },
     { country: "Germany", currency: "EUR" },
-    { country: "UK", currency: "GBP" },
-    { country: "Singapore", currency: "SGD" }
+    { country: "India", currency: "INR" }
   ];
   
   export function randomItem<T>(arr: T[]): T {

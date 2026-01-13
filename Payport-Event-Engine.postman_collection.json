@@ -237,14 +237,14 @@
 								}
 							]
 						},
-						"description": "Connect to real-time payment event stream (SSE).\n\n**Requires:** Active session (call `/start` first)\n\n**Query params:**\n- `email`: Candidate's email\n\n**Event types:**\n- `connected`: Initial connection confirmation\n- `mode_changed`: Traffic mode was changed\n- `session_ended`: Assignment time expired\n- Payment events with: `eventId`, `timestamp`, `amount`, `currency`, `country`, `paymentMethod`, `source`, `status`\n\n**Payment Methods:** CARD, APPLE_PAY, GOOGLE_PAY, KLARNA, AFTERPAY, PAYPAL, CARD_INSTALLMENT\n\n**Countries:** India (INR), USA (USD), Germany (EUR), UK (GBP), Singapore (SGD)\n\n**Sources:** web, mobile, api\n\n**Status:** success (95%), failed (5%)\n\n**Note:** Use browser EventSource or curl to test SSE. Postman shows raw stream."
+						"description": "Connect to real-time payment event stream (SSE).\n\n**Requires:** Active session (call `/start` first)\n\n**Query params:**\n- `email`: Candidate's email\n\n**Event types:**\n- `connected`: Initial connection confirmation\n- `mode_changed`: Traffic mode was changed\n- `session_ended`: Assignment time expired\n- Payment events with: `eventId`, `timestamp`, `amount`, `currency`, `country`, `paymentMethod`, `source`, `status`\n\n**Payment Methods:** CARD, APPLE_PAY, GOOGLE_PAY, KLARNA, AFTERPAY, PAYPAL, CARD_INSTALLMENT\n\n**Countries:** US (USD), GB (GBP), Canada (CAD), Australia (AUD), UAE (AED), Germany (EUR), India (INR)\n\n**Sources:** web, mobile, api\n\n**Status:** success (95%), failed (5%)\n\n**Note:** Use browser EventSource or curl to test SSE. Postman shows raw stream."
 					},
 					"response": [
 						{
 							"name": "Payment Event Example",
 							"status": "OK",
 							"code": 200,
-							"body": "data: {\"type\":\"connected\",\"mode\":\"normal\"}\n\ndata: {\"eventId\":\"evt_abc123\",\"timestamp\":\"2026-01-13T10:30:00.000Z\",\"amount\":249.99,\"currency\":\"USD\",\"country\":\"USA\",\"paymentMethod\":\"CARD\",\"source\":\"web\",\"status\":\"success\"}\n\ndata: {\"eventId\":\"evt_def456\",\"timestamp\":\"2026-01-13T10:30:01.000Z\",\"amount\":89.50,\"currency\":\"EUR\",\"country\":\"Germany\",\"paymentMethod\":\"KLARNA\",\"source\":\"mobile\",\"status\":\"success\"}"
+							"body": "data: {\"type\":\"connected\",\"mode\":\"normal\"}\n\ndata: {\"eventId\":\"evt_abc123\",\"timestamp\":\"2026-01-13T10:30:00.000Z\",\"amount\":249.99,\"currency\":\"USD\",\"country\":\"US\",\"paymentMethod\":\"CARD\",\"source\":\"web\",\"status\":\"success\"}\n\ndata: {\"eventId\":\"evt_def456\",\"timestamp\":\"2026-01-13T10:30:01.000Z\",\"amount\":89.50,\"currency\":\"EUR\",\"country\":\"Germany\",\"paymentMethod\":\"KLARNA\",\"source\":\"mobile\",\"status\":\"success\"}\n\ndata: {\"eventId\":\"evt_ghi789\",\"timestamp\":\"2026-01-13T10:30:02.000Z\",\"amount\":150.00,\"currency\":\"CAD\",\"country\":\"Canada\",\"paymentMethod\":\"APPLE_PAY\",\"source\":\"mobile\",\"status\":\"success\"}"
 						},
 						{
 							"name": "No Active Session",
@@ -279,7 +279,7 @@
 							"host": ["{{baseUrl}}"],
 							"path": ["test", "mode"]
 						},
-						"description": "Change the event simulation mode for your session.\n\n**Required fields:**\n- `email`: Your email\n- `mode`: One of the valid modes\n\n**Available Modes:**\n| Mode | Description | Events/sec |\n|------|-------------|------------|\n| `normal` | Standard traffic | ~1/sec |\n| `high_traffic` | Stress test | ~20/sec |\n| `country_focus` | India only | ~1/sec |\n| `payment_spike` | Large amounts ($5K-$20K) | ~3/sec |\n| `chaos` | Random bursts & gaps | Variable |\n\n**Tip:** Use this to test how your dashboard handles different traffic patterns!"
+						"description": "Change the event simulation mode for your session.\n\n**Required fields:**\n- `email`: Your email\n- `mode`: One of the valid modes\n\n**Available Modes:**\n| Mode | Description | Events/sec |\n|------|-------------|------------|\n| `normal` | Standard traffic | ~1/sec |\n| `high_traffic` | Stress test | ~20/sec |\n| `country_focus` | US only | ~1/sec |\n| `payment_spike` | Large amounts ($5K-$20K) | ~3/sec |\n| `chaos` | Random bursts & gaps | Variable |\n\n**Tip:** Use this to test how your dashboard handles different traffic patterns!"
 					},
 					"response": [
 						{
@@ -365,7 +365,7 @@
 							"host": ["{{baseUrl}}"],
 							"path": ["test", "mode"]
 						},
-						"description": "Set mode to country_focus (India only) - test geographic filtering"
+						"description": "Set mode to country_focus (US only) - test geographic filtering"
 					}
 				},
 				{

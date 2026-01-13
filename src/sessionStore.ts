@@ -32,7 +32,7 @@ export function getSession(email: string) {
     return null;
   }
 
-  if (Date.now() > s.endsAt) {
+  if (Date.now() > s.endsAt) { 
     const wasActive = s.isActive;
     s.isActive = false;
     if (wasActive) {
