@@ -4,13 +4,15 @@ import cors from "cors";
 import logger from "./logger";
 import { getDb } from "./db";
 import {
+  initSessionStore,
   createSession,
   getSession,
   stopSession,
   updateMode,
   resumeSession,
   createEvalSession,
-  listSessions
+  listSessions,
+  emailExists
 } from "./sessionStore";
 import {
   generatePayment,
@@ -137,7 +139,7 @@ app.post("/start", async (req, res) => {
     });
     logger.info("Assignment record created", { email, startedAt, endsAt });
 
-    createSession(email, name, endsAt.getTime());
+    await createSession(email, name, endsAt.getTime());
 
     logger.info("Assignment started successfully", { email, endsAt });
     res.json({
@@ -235,7 +237,7 @@ app.post("/stop", async (req, res) => {
       logger.info("Submission recorded", { email, githubRepo });
     }
 
-    stopSession(email);
+    await stopSession(email);
     logger.info("Assignment stopped successfully", { email });
     res.json({ message: "Assignment completed" });
   } catch (error) {
@@ -249,7 +251,7 @@ app.post("/stop", async (req, res) => {
 
 /* ---------------- EVENTS (SSE) ---------------- */
 
-app.get("/events", (req, res) => {
+app.get("/events", async (req, res) => {
   const email = req.query.email as string;
   
   logger.info("SSE connection requested", { email });
@@ -259,7 +261,7 @@ app.get("/events", (req, res) => {
     return res.status(400).json({ error: "Missing email query parameter" });
   }
 
-  const session = getSession(email);
+  const session = await getSession(email);
 
   if (!session || !session.isActive) {
     logger.warn("SSE connection failed: no active session", { email, hasSession: !!session });
@@ -280,13 +282,13 @@ app.get("/events", (req, res) => {
   let isConnectionClosed = false;
   let activeTimeout: NodeJS.Timeout | null = null;
 
-  const sendEvent = () => {
+  const sendEvent = async () => {
     // Stop if connection was closed
     if (isConnectionClosed) {
       return;
     }
 
-    const s = getSession(email);
+    const s = await getSession(email);
     if (!s || !s.isActive) {
       logger.info("SSE stream ended: session inactive", { email, totalEvents: eventCount });
       res.write(`data: ${JSON.stringify({ type: "session_ended" })}\n\n`);
@@ -331,7 +333,7 @@ app.get("/events", (req, res) => {
 const VALID_MODES = ["normal", "high_traffic", "country_focus", "payment_spike", "chaos"] as const;
 
 // Candidates can use this to test their dashboard with different traffic modes
-app.post("/test/mode", (req, res) => {
+app.post("/test/mode", async (req, res) => {
   const { email, mode } = req.body;
   
   logger.info("Test mode change requested", { email, mode });
@@ -350,7 +352,7 @@ app.post("/test/mode", (req, res) => {
   }
 
   try {
-    updateMode(email, mode);
+    await updateMode(email, mode);
     logger.info("Test mode changed successfully", { email, mode });
     res.json({ message: `Mode set to ${mode}` });
   } catch (e) {
@@ -382,7 +384,7 @@ const requireAdminKey = (req: express.Request, res: express.Response, next: expr
 };
 
 // Resume an expired/completed session for evaluation
-app.post("/admin/resume", requireAdminKey, (req, res) => {
+app.post("/admin/resume", requireAdminKey, async (req, res) => {
   const { email, durationMinutes = 60 } = req.body;
   
   logger.info("Admin: resume session requested", { email, durationMinutes });
@@ -392,7 +394,7 @@ app.post("/admin/resume", requireAdminKey, (req, res) => {
   }
 
   try {
-    const session = resumeSession(email, durationMinutes * 60 * 1000);
+    const session = await resumeSession(email, durationMinutes * 60 * 1000);
     res.json({ 
       message: "Session resumed for evaluation",
       email: session.email,
@@ -408,7 +410,7 @@ app.post("/admin/resume", requireAdminKey, (req, res) => {
 });
 
 // Create a fresh evaluation session (no /start required, bypasses email restriction)
-app.post("/admin/eval", requireAdminKey, (req, res) => {
+app.post("/admin/eval", requireAdminKey, async (req, res) => {
   const { email = "eval@payport.dev", durationMinutes = 60, mode = "normal" } = req.body;
   
   logger.info("Admin: eval session requested", { email, durationMinutes, mode });
@@ -417,7 +419,7 @@ app.post("/admin/eval", requireAdminKey, (req, res) => {
     return res.status(400).json({ error: "Invalid mode", validModes: VALID_MODES });
   }
 
-  const session = createEvalSession(email, durationMinutes * 60 * 1000, mode);
+  const session = await createEvalSession(email, durationMinutes * 60 * 1000, mode);
   
   res.json({ 
     message: "Evaluation session created",
@@ -430,10 +432,10 @@ app.post("/admin/eval", requireAdminKey, (req, res) => {
 });
 
 // List all active sessions
-app.get("/admin/sessions", requireAdminKey, (req, res) => {
+app.get("/admin/sessions", requireAdminKey, async (req, res) => {
   logger.info("Admin: listing all sessions");
   
-  const sessions = listSessions();
+  const sessions = await listSessions();
   const now = Date.now();
   
   res.json({
@@ -569,13 +571,28 @@ app.get("/info", (_, res) => {
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-  logger.info("Server started", { 
-    port: PORT, 
-    environment: process.env.NODE_ENV || "development",
-    nodeVersion: process.version
-  });
-});
+// Initialize and start server
+async function startServer() {
+  try {
+    // Initialize session store (creates indexes)
+    await initSessionStore();
+    
+    app.listen(PORT, () => {
+      logger.info("Server started", { 
+        port: PORT, 
+        environment: process.env.NODE_ENV || "development",
+        nodeVersion: process.version
+      });
+    });
+  } catch (error) {
+    logger.error("Failed to start server", { 
+      error: error instanceof Error ? error.message : String(error) 
+    });
+    process.exit(1);
+  }
+}
+
+startServer();
 
 // Graceful shutdown
 process.on("SIGTERM", () => {

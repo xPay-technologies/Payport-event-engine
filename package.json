@@ -4,7 +4,13 @@
     "type": "module",
     "scripts": {
         "dev": "tsx src/index.ts",
-        "build": "tsc"
+        "build": "tsc",
+        "start": "NODE_ENV=production tsx src/index.ts",
+        "pm2:start": "pm2 start ecosystem.config.js",
+        "pm2:stop": "pm2 stop payport-event-engine",
+        "pm2:restart": "pm2 restart payport-event-engine",
+        "pm2:logs": "pm2 logs payport-event-engine",
+        "pm2:status": "pm2 status"
     },
     "dependencies": {
         "cors": "^2.8.5",
