@@ -4,10 +4,10 @@ module.exports = {
       name: "payport-event-engine",
       script: "npx",
       args: "tsx src/index.ts",
-      cwd: "/home/ubuntu/payport-event-engine",
+      cwd: "/home/ec2-user/Payport-event-engine",
       env: {
         NODE_ENV: "production",
-        PORT: 3005
+        PORT: 3000
       },
       env_file: ".env",
       instances: 1, // Single instance for SSE (stateful sessions)
