@@ -1,0 +1,551 @@
+{
+	"info": {
+		"_postman_id": "payport-event-engine-collection",
+		"name": "Payport Event Engine",
+		"description": "API collection for Payport Event Engine (Codename: LIVEWIRE) - Real-time payment event streaming for frontend take-home assignments.\n\n## Overview\n- Time-bound 8-hour assignment system\n- SSE-based real-time payment event streaming\n- Multiple traffic simulation modes\n\n## Flow\n1. Start assignment with `/start`\n2. Connect to `/events` for real-time payment stream\n3. Test with `/test/mode` to switch traffic modes\n4. Check time with `/time-remaining`\n5. Submit with `/stop`",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "email",
+			"value": "candidate@example.com",
+			"type": "string"
+		},
+		{
+			"key": "adminApiKey",
+			"value": "fdc5764c6675d8cbbf68d94148453aec47b41d73d0039e2459b14cfd6ac64d74",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Health & Info",
+			"description": "Service health and information endpoints",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/health",
+							"host": ["{{baseUrl}}"],
+							"path": ["health"]
+						},
+						"description": "Check if the service is healthy and connected to MongoDB.\n\n**Response:**\n- `status`: healthy/unhealthy\n- `timestamp`: Current server time\n- `uptime`: Server uptime in seconds"
+					},
+					"response": [
+						{
+							"name": "Healthy",
+							"status": "OK",
+							"code": 200,
+							"body": "{\n    \"status\": \"healthy\",\n    \"timestamp\": \"2026-01-13T10:30:00.000Z\",\n    \"uptime\": 3600\n}"
+						},
+						{
+							"name": "Unhealthy",
+							"status": "Service Unavailable",
+							"code": 503,
+							"body": "{\n    \"status\": \"unhealthy\",\n    \"error\": \"Database connection failed\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Assignment Info",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/info",
+							"host": ["{{baseUrl}}"],
+							"path": ["info"]
+						},
+						"description": "Get detailed information about the assignment, evaluation criteria, and hints.\n\nThis is the first endpoint candidates should call to understand what they're building."
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"body": "{\n    \"service\": \"Payport Event Engine\",\n    \"codename\": \"LIVEWIRE\",\n    \"purpose\": \"Simulate global payment chaos so frontend engineers can build calm, beautiful systems on top of it.\",\n    \"creator\": {\n        \"name\": \"Siddhant Patil\",\n        \"role\": \"Founding Engineer @ xPay\",\n        \"philosophy\": [\n            \"Frontend is not just UI, it's systems thinking\",\n            \"Real-time data exposes bad abstractions fast\",\n            \"Great engineers optimize for clarity, not cleverness\"\n        ]\n    },\n    \"assignment\": {\n        \"name\": \"Payport Live Dashboard\",\n        \"durationHours\": 8,\n        \"whatYouAreBuilding\": \"A real-time dashboard that shows live payment activity across the globe.\",\n        \"whatWeCareAbout\": [\n            \"How you think about real-time data\",\n            \"How you manage state under constant updates\",\n            \"Performance and rendering discipline\",\n            \"UX decisions for always-on screens\",\n            \"Trade-offs you consciously make\"\n        ]\n    },\n    \"eventEngine\": {\n        \"realtime\": true,\n        \"transport\": \"Server-Sent Events (SSE)\",\n        \"modes\": [\"normal\", \"high_traffic\", \"country_focus\", \"payment_spike\", \"chaos\"]\n    },\n    \"hints\": [\n        \"You don't need to show everything, choose wisely\",\n        \"Separating ingestion from rendering will save you\",\n        \"Derived state > raw state\"\n    ]\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Assignment Lifecycle",
+			"description": "Endpoints for managing the candidate's assignment",
+			"item": [
+				{
+					"name": "Start Assignment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"John Doe\",\n    \"email\": \"{{email}}\",\n    \"github\": \"https://github.com/johndoe\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/start",
+							"host": ["{{baseUrl}}"],
+							"path": ["start"]
+						},
+						"description": "Start the 8-hour assignment timer for a candidate.\n\n**Required fields:**\n- `name`: Candidate's full name\n- `email`: Valid email format (one attempt per email)\n- `github`: GitHub profile URL (format: https://github.com/username)\n\n**Validation:**\n- Email must be valid format\n- GitHub URL must be valid profile URL\n- Each email can only be used once\n\n**Response:**\n- `message`: Confirmation\n- `endsAt`: ISO timestamp when assignment expires"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "POST",
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"John Doe\",\n    \"email\": \"john@example.com\",\n    \"github\": \"https://github.com/johndoe\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/start",
+									"host": ["{{baseUrl}}"],
+									"path": ["start"]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"body": "{\n    \"message\": \"Assignment started\",\n    \"endsAt\": \"2026-01-13T18:00:00.000Z\"\n}"
+						},
+						{
+							"name": "Email Already Used",
+							"status": "Bad Request",
+							"code": 400,
+							"body": "{\n    \"error\": \"Email already used. One attempt per candidate.\"\n}"
+						},
+						{
+							"name": "Invalid Email",
+							"status": "Bad Request",
+							"code": 400,
+							"body": "{\n    \"error\": \"Invalid email format\"\n}"
+						},
+						{
+							"name": "Invalid GitHub URL",
+							"status": "Bad Request",
+							"code": 400,
+							"body": "{\n    \"error\": \"Invalid GitHub profile URL. Expected format: https://github.com/username\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Time Remaining",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/time-remaining?email={{email}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["time-remaining"],
+							"query": [
+								{
+									"key": "email",
+									"value": "{{email}}"
+								}
+							]
+						},
+						"description": "Check how much time is left in the assignment.\n\n**Query params:**\n- `email`: Candidate's email\n\n**Response:**\n- `remainingSeconds`: Seconds until assignment expires"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"body": "{\n    \"remainingSeconds\": 28800\n}"
+						},
+						{
+							"name": "No Active Assignment",
+							"status": "Not Found",
+							"code": 404,
+							"body": "{\n    \"error\": \"No active assignment\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Stop Assignment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{email}}\",\n    \"githubRepo\": \"https://github.com/johndoe/payport-dashboard\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/stop",
+							"host": ["{{baseUrl}}"],
+							"path": ["stop"]
+						},
+						"description": "End the assignment and submit the solution.\n\n**Required fields:**\n- `email`: Candidate's email\n\n**Optional fields:**\n- `githubRepo`: URL to submission repository"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"body": "{\n    \"message\": \"Assignment completed\"\n}"
+						},
+						{
+							"name": "No Active Assignment",
+							"status": "Not Found",
+							"code": 404,
+							"body": "{\n    \"error\": \"No active assignment found\"\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Events (SSE)",
+			"description": "Server-Sent Events endpoint for real-time payment streaming",
+			"item": [
+				{
+					"name": "Payment Events Stream",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/event-stream"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/events?email={{email}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["events"],
+							"query": [
+								{
+									"key": "email",
+									"value": "{{email}}"
+								}
+							]
+						},
+						"description": "Connect to real-time payment event stream (SSE).\n\n**Requires:** Active session (call `/start` first)\n\n**Query params:**\n- `email`: Candidate's email\n\n**Event types:**\n- `connected`: Initial connection confirmation\n- `mode_changed`: Traffic mode was changed\n- `session_ended`: Assignment time expired\n- Payment events with: `eventId`, `timestamp`, `amount`, `currency`, `country`, `paymentMethod`, `source`, `status`\n\n**Payment Methods:** CARD, APPLE_PAY, GOOGLE_PAY, KLARNA, AFTERPAY, PAYPAL, CARD_INSTALLMENT\n\n**Countries:** India (INR), USA (USD), Germany (EUR), UK (GBP), Singapore (SGD)\n\n**Sources:** web, mobile, api\n\n**Status:** success (95%), failed (5%)\n\n**Note:** Use browser EventSource or curl to test SSE. Postman shows raw stream."
+					},
+					"response": [
+						{
+							"name": "Payment Event Example",
+							"status": "OK",
+							"code": 200,
+							"body": "data: {\"type\":\"connected\",\"mode\":\"normal\"}\n\ndata: {\"eventId\":\"evt_abc123\",\"timestamp\":\"2026-01-13T10:30:00.000Z\",\"amount\":249.99,\"currency\":\"USD\",\"country\":\"USA\",\"paymentMethod\":\"CARD\",\"source\":\"web\",\"status\":\"success\"}\n\ndata: {\"eventId\":\"evt_def456\",\"timestamp\":\"2026-01-13T10:30:01.000Z\",\"amount\":89.50,\"currency\":\"EUR\",\"country\":\"Germany\",\"paymentMethod\":\"KLARNA\",\"source\":\"mobile\",\"status\":\"success\"}"
+						},
+						{
+							"name": "No Active Session",
+							"status": "Forbidden",
+							"code": 403,
+							"body": "{\n    \"error\": \"No active session. Start assignment first.\"\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Test Mode",
+			"description": "Test different traffic modes to verify your dashboard handles various scenarios. Candidates can use these to stress-test their implementation.",
+			"item": [
+				{
+					"name": "Change Traffic Mode",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{email}}\",\n    \"mode\": \"high_traffic\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/test/mode",
+							"host": ["{{baseUrl}}"],
+							"path": ["test", "mode"]
+						},
+						"description": "Change the event simulation mode for your session.\n\n**Required fields:**\n- `email`: Your email\n- `mode`: One of the valid modes\n\n**Available Modes:**\n| Mode | Description | Events/sec |\n|------|-------------|------------|\n| `normal` | Standard traffic | ~1/sec |\n| `high_traffic` | Stress test | ~20/sec |\n| `country_focus` | India only | ~1/sec |\n| `payment_spike` | Large amounts ($5K-$20K) | ~3/sec |\n| `chaos` | Random bursts & gaps | Variable |\n\n**Tip:** Use this to test how your dashboard handles different traffic patterns!"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"body": "{\n    \"message\": \"Mode set to high_traffic\"\n}"
+						},
+						{
+							"name": "Invalid Mode",
+							"status": "Bad Request",
+							"code": 400,
+							"body": "{\n    \"error\": \"Invalid mode\",\n    \"validModes\": [\"normal\", \"high_traffic\", \"country_focus\", \"payment_spike\", \"chaos\"]\n}"
+						},
+						{
+							"name": "Session Not Found",
+							"status": "Not Found",
+							"code": 404,
+							"body": "{\n    \"error\": \"Session not found\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Set Mode: Normal",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{email}}\",\n    \"mode\": \"normal\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/test/mode",
+							"host": ["{{baseUrl}}"],
+							"path": ["test", "mode"]
+						},
+						"description": "Set mode to normal (~1 event/sec) - baseline traffic"
+					}
+				},
+				{
+					"name": "Set Mode: High Traffic",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{email}}\",\n    \"mode\": \"high_traffic\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/test/mode",
+							"host": ["{{baseUrl}}"],
+							"path": ["test", "mode"]
+						},
+						"description": "Set mode to high_traffic (~20 events/sec) - stress test your rendering"
+					}
+				},
+				{
+					"name": "Set Mode: Country Focus",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{email}}\",\n    \"mode\": \"country_focus\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/test/mode",
+							"host": ["{{baseUrl}}"],
+							"path": ["test", "mode"]
+						},
+						"description": "Set mode to country_focus (India only) - test geographic filtering"
+					}
+				},
+				{
+					"name": "Set Mode: Payment Spike",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{email}}\",\n    \"mode\": \"payment_spike\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/test/mode",
+							"host": ["{{baseUrl}}"],
+							"path": ["test", "mode"]
+						},
+						"description": "Set mode to payment_spike (large amounts $5000-$20000) - test number formatting"
+					}
+				},
+				{
+					"name": "Set Mode: Chaos",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{email}}\",\n    \"mode\": \"chaos\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/test/mode",
+							"host": ["{{baseUrl}}"],
+							"path": ["test", "mode"]
+						},
+						"description": "Set mode to chaos (random bursts and gaps) - test resilience"
+					}
+				}
+			]
+		},
+		{
+			"name": "🔒 Admin (Evaluator Only)",
+			"description": "Admin endpoints for evaluating candidate submissions. These are NOT shared with candidates.",
+			"item": [
+				{
+					"name": "Resume Expired Session",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Admin-API-Key",
+								"value": "{{adminApiKey}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{email}}\",\n    \"durationMinutes\": 60\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/resume",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "resume"]
+						},
+						"description": "Resume an expired or completed session for evaluation.\n\n**Use case:** Candidate submitted, you want to test their dashboard with live events.\n\n**Required fields:**\n- `email`: Candidate's email\n\n**Optional fields:**\n- `durationMinutes`: How long to extend (default: 60)"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"body": "{\n    \"message\": \"Session resumed for evaluation\",\n    \"email\": \"candidate@example.com\",\n    \"mode\": \"normal\",\n    \"expiresAt\": \"2026-01-13T11:30:00.000Z\",\n    \"durationMinutes\": 60,\n    \"connectWith\": \"/events?email=candidate%40example.com\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Create Evaluation Session",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Admin-API-Key",
+								"value": "{{adminApiKey}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"eval@payport.dev\",\n    \"durationMinutes\": 60,\n    \"mode\": \"normal\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/eval",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "eval"]
+						},
+						"description": "Create a fresh evaluation session without requiring /start.\n\n**Use case:** Quick testing, or when candidate session is not in memory."
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"body": "{\n    \"message\": \"Evaluation session created\",\n    \"email\": \"eval@payport.dev\",\n    \"mode\": \"normal\",\n    \"expiresAt\": \"2026-01-13T11:30:00.000Z\",\n    \"durationMinutes\": 60,\n    \"connectWith\": \"/events?email=eval%40payport.dev\"\n}"
+						}
+					]
+				},
+				{
+					"name": "List All Sessions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Admin-API-Key",
+								"value": "{{adminApiKey}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/sessions",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "sessions"]
+						},
+						"description": "List all active sessions in memory."
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"body": "{\n    \"total\": 2,\n    \"sessions\": [\n        {\n            \"email\": \"candidate@example.com\",\n            \"name\": \"John Doe\",\n            \"mode\": \"normal\",\n            \"isActive\": true,\n            \"remainingMinutes\": 420\n        }\n    ]\n}"
+						}
+					]
+				},
+				{
+					"name": "Demo Events Stream",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/event-stream"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/demo/events?mode=normal",
+							"host": ["{{baseUrl}}"],
+							"path": ["demo", "events"],
+							"query": [
+								{
+									"key": "mode",
+									"value": "normal"
+								}
+							]
+						},
+						"description": "Stream events without any session. Use for quick testing or demos."
+					},
+					"response": [
+						{
+							"name": "Demo Event Example",
+							"status": "OK",
+							"code": 200,
+							"body": "data: {\"type\":\"demo_connected\",\"mode\":\"normal\"}\n\ndata: {\"eventId\":\"evt_abc123\",\"amount\":249.99,\"currency\":\"USD\"}"
+						}
+					]
+				}
+			]
+		}
+	]
+}
+
