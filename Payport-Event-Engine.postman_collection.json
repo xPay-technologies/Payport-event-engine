@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "payport-event-engine-collection",
 		"name": "Payport Event Engine",
-		"description": "API collection for Payport Event Engine (Codename: LIVEWIRE) - Real-time payment event streaming for frontend take-home assignments.\n\n## Overview\n- Time-bound 8-hour assignment system\n- SSE-based real-time payment event streaming\n- Multiple traffic simulation modes\n\n## Flow\n1. Start assignment with `/start`\n2. Connect to `/events` for real-time payment stream\n3. Test with `/test/mode` to switch traffic modes\n4. Check time with `/time-remaining`\n5. Submit with `/stop`",
+		"description": "API collection for Payport Event Engine (Codename: LIVEWIRE) - Real-time payment event streaming for frontend take-home assignments.\n\n## Overview\n- Time-bound 8-hour assignment system\n- SSE-based real-time payment event streaming\n- Multiple traffic simulation modes\n- Pre-approved candidate whitelist\n\n## Admin Flow (Before Candidate)\n1. Add candidate email to eligible list via `/admin/candidates`\n2. Share assignment link with candidate\n\n## Candidate Flow\n1. Start assignment with `/start` (must be pre-approved)\n2. Connect to `/events` for real-time payment stream\n3. Test with `/test/mode` to switch traffic modes\n4. Check time with `/time-remaining`\n5. Submit with `/stop`",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -100,7 +100,7 @@
 							"host": ["{{baseUrl}}"],
 							"path": ["start"]
 						},
-						"description": "Start the 8-hour assignment timer for a candidate.\n\n**Required fields:**\n- `name`: Candidate's full name\n- `email`: Valid email format (one attempt per email)\n- `github`: GitHub profile URL (format: https://github.com/username)\n\n**Validation:**\n- Email must be valid format\n- GitHub URL must be valid profile URL\n- Each email can only be used once\n\n**Response:**\n- `message`: Confirmation\n- `endsAt`: ISO timestamp when assignment expires"
+						"description": "Start the 8-hour assignment timer for a candidate.\n\n**Required fields:**\n- `name`: Candidate's full name\n- `email`: Valid email format (must be pre-approved by admin)\n- `github`: GitHub profile URL (format: https://github.com/username)\n\n**Validation:**\n- Email must be in the eligible candidates list (added by admin)\n- Email must be valid format\n- GitHub URL must be valid profile URL\n- Each email can only be used once\n\n**Response:**\n- `message`: Confirmation\n- `endsAt`: ISO timestamp when assignment expires"
 					},
 					"response": [
 						{
@@ -120,6 +120,12 @@
 							"status": "OK",
 							"code": 200,
 							"body": "{\n    \"message\": \"Assignment started\",\n    \"endsAt\": \"2026-01-13T18:00:00.000Z\"\n}"
+						},
+						{
+							"name": "Not Authorized (Email not in eligible list)",
+							"status": "Forbidden",
+							"code": 403,
+							"body": "{\n    \"error\": \"You are not authorized to take this assignment. Please contact the administrator if you believe this is an error.\"\n}"
 						},
 						{
 							"name": "Email Already Used",
@@ -416,8 +422,172 @@
 		},
 		{
 			"name": "🔒 Admin (Evaluator Only)",
-			"description": "Admin endpoints for evaluating candidate submissions. These are NOT shared with candidates.",
+			"description": "Admin endpoints for evaluating candidate submissions and managing eligible candidates. These are NOT shared with candidates.",
 			"item": [
+				{
+					"name": "Add Eligible Candidate",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Admin-API-Key",
+								"value": "{{adminApiKey}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"candidate@example.com\",\n    \"name\": \"John Doe\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/candidates",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "candidates"]
+						},
+						"description": "Add a candidate to the eligible list. Only eligible candidates can start the assignment.\n\n**Required fields:**\n- `email`: Candidate's email (single)\n\nOR\n- `emails`: Array of emails (batch add)\n\n**Optional fields:**\n- `name`: Candidate's name (only for single email)"
+					},
+					"response": [
+						{
+							"name": "Success - Single",
+							"status": "OK",
+							"code": 200,
+							"body": "{\n    \"message\": \"Added 1 candidate(s)\",\n    \"added\": [\"candidate@example.com\"],\n    \"alreadyExists\": []\n}"
+						},
+						{
+							"name": "Already Exists",
+							"status": "OK",
+							"code": 200,
+							"body": "{\n    \"message\": \"Added 0 candidate(s)\",\n    \"added\": [],\n    \"alreadyExists\": [\"candidate@example.com\"]\n}"
+						}
+					]
+				},
+				{
+					"name": "Add Multiple Candidates (Batch)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Admin-API-Key",
+								"value": "{{adminApiKey}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"emails\": [\n        \"alice@example.com\",\n        \"bob@example.com\",\n        \"carol@example.com\"\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/candidates",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "candidates"]
+						},
+						"description": "Add multiple candidates to the eligible list in one request.\n\n**Required fields:**\n- `emails`: Array of email addresses"
+					},
+					"response": [
+						{
+							"name": "Success - Batch",
+							"status": "OK",
+							"code": 200,
+							"body": "{\n    \"message\": \"Added 3 candidate(s)\",\n    \"added\": [\"alice@example.com\", \"bob@example.com\", \"carol@example.com\"],\n    \"alreadyExists\": []\n}"
+						}
+					]
+				},
+				{
+					"name": "List Eligible Candidates",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Admin-API-Key",
+								"value": "{{adminApiKey}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/candidates",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "candidates"]
+						},
+						"description": "List all eligible candidates with their assignment status.\n\n**Response includes:**\n- `email`: Candidate's email\n- `name`: Candidate's name (if provided)\n- `addedAt`: When they were added\n- `assignmentStatus`: not_started | active | completed\n- `startedAt`: When they started (if applicable)\n- `endedAt`: When they finished (if applicable)"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"body": "{\n    \"total\": 3,\n    \"candidates\": [\n        {\n            \"email\": \"alice@example.com\",\n            \"name\": \"Alice Smith\",\n            \"addedAt\": \"2026-01-13T10:00:00.000Z\",\n            \"assignmentStatus\": \"completed\",\n            \"startedAt\": \"2026-01-13T10:30:00.000Z\",\n            \"endedAt\": \"2026-01-13T18:30:00.000Z\"\n        },\n        {\n            \"email\": \"bob@example.com\",\n            \"addedAt\": \"2026-01-13T10:00:00.000Z\",\n            \"assignmentStatus\": \"active\",\n            \"startedAt\": \"2026-01-13T14:00:00.000Z\"\n        },\n        {\n            \"email\": \"carol@example.com\",\n            \"addedAt\": \"2026-01-13T10:00:00.000Z\",\n            \"assignmentStatus\": \"not_started\"\n        }\n    ]\n}"
+						}
+					]
+				},
+				{
+					"name": "Check Candidate Status",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Admin-API-Key",
+								"value": "{{adminApiKey}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/candidates/{{email}}/status",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "candidates", "{{email}}", "status"]
+						},
+						"description": "Check eligibility and assignment status for a specific email."
+					},
+					"response": [
+						{
+							"name": "Eligible - Not Started",
+							"status": "OK",
+							"code": 200,
+							"body": "{\n    \"email\": \"candidate@example.com\",\n    \"isEligible\": true,\n    \"addedAt\": \"2026-01-13T10:00:00.000Z\",\n    \"assignmentStatus\": \"not_started\"\n}"
+						},
+						{
+							"name": "Not Eligible",
+							"status": "OK",
+							"code": 200,
+							"body": "{\n    \"email\": \"random@example.com\",\n    \"isEligible\": false,\n    \"assignmentStatus\": \"not_started\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Remove Eligible Candidate",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "X-Admin-API-Key",
+								"value": "{{adminApiKey}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/candidates/{{email}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "candidates", "{{email}}"]
+						},
+						"description": "Remove a candidate from the eligible list.\n\n**Note:** This does NOT delete their assignment if they already started. It only prevents future attempts."
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"body": "{\n    \"message\": \"Candidate removed from eligible list\",\n    \"email\": \"candidate@example.com\"\n}"
+						},
+						{
+							"name": "Not Found",
+							"status": "Not Found",
+							"code": 404,
+							"body": "{\n    \"error\": \"Candidate not found in eligible list\"\n}"
+						}
+					]
+				},
 				{
 					"name": "Resume Expired Session",
 					"request": {

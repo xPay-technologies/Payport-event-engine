@@ -103,6 +103,18 @@ app.post("/start", async (req, res) => {
   try {
     const db = await getDb();
 
+    // Check if candidate is eligible (pre-approved by admin)
+    const eligibleCandidate = await db
+      .collection("eligible_candidates")
+      .findOne({ email: email.toLowerCase() });
+
+    if (!eligibleCandidate) {
+      logger.warn("Assignment start failed: email not in eligible list", { email });
+      return res.status(403).json({ 
+        error: "You are not authorized to take this assignment. Please contact the administrator if you believe this is an error." 
+      });
+    }
+
     // Check if email has ever been used (one attempt per email)
     const existingAssignment = await db
       .collection("assignments")
@@ -449,6 +461,182 @@ app.get("/admin/sessions", requireAdminKey, async (req, res) => {
       remainingMinutes: Math.max(0, Math.round((s.endsAt - now) / 60000))
     }))
   });
+});
+
+/* ---------------- ADMIN: Candidate Management ---------------- */
+
+// Add eligible candidate(s) - accepts single or array
+app.post("/admin/candidates", requireAdminKey, async (req, res) => {
+  const { email, emails, name } = req.body;
+  
+  logger.info("Admin: add eligible candidate(s) requested", { email, emails, name });
+
+  // Support both single email and batch emails
+  const emailList: string[] = emails || (email ? [email] : []);
+  
+  if (emailList.length === 0) {
+    return res.status(400).json({ error: "Missing email or emails field" });
+  }
+
+  // Validate all emails
+  const invalidEmails = emailList.filter(e => !isValidEmail(e));
+  if (invalidEmails.length > 0) {
+    return res.status(400).json({ 
+      error: "Invalid email format", 
+      invalidEmails 
+    });
+  }
+
+  try {
+    const db = await getDb();
+    const results = {
+      added: [] as string[],
+      alreadyExists: [] as string[]
+    };
+
+    for (const candidateEmail of emailList) {
+      const normalizedEmail = candidateEmail.toLowerCase();
+      
+      // Check if already exists
+      const existing = await db
+        .collection("eligible_candidates")
+        .findOne({ email: normalizedEmail });
+
+      if (existing) {
+        results.alreadyExists.push(normalizedEmail);
+        continue;
+      }
+
+      await db.collection("eligible_candidates").insertOne({
+        email: normalizedEmail,
+        name: emailList.length === 1 ? name : undefined,
+        addedAt: new Date(),
+        addedBy: "admin"
+      });
+      
+      results.added.push(normalizedEmail);
+      logger.info("Admin: eligible candidate added", { email: normalizedEmail });
+    }
+
+    res.json({
+      message: `Added ${results.added.length} candidate(s)`,
+      added: results.added,
+      alreadyExists: results.alreadyExists
+    });
+  } catch (error) {
+    logger.error("Admin: add candidate failed", { 
+      error: error instanceof Error ? error.message : String(error) 
+    });
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// List all eligible candidates
+app.get("/admin/candidates", requireAdminKey, async (req, res) => {
+  logger.info("Admin: listing eligible candidates");
+
+  try {
+    const db = await getDb();
+    
+    const candidates = await db
+      .collection("eligible_candidates")
+      .find({})
+      .sort({ addedAt: -1 })
+      .toArray();
+
+    // Also get assignment status for each candidate
+    const candidatesWithStatus = await Promise.all(
+      candidates.map(async (c) => {
+        const assignment = await db
+          .collection("assignments")
+          .findOne({ email: c.email });
+        
+        return {
+          email: c.email,
+          name: c.name,
+          addedAt: c.addedAt,
+          assignmentStatus: assignment?.status || "not_started",
+          startedAt: assignment?.startedAt,
+          endedAt: assignment?.endedAt
+        };
+      })
+    );
+
+    res.json({
+      total: candidatesWithStatus.length,
+      candidates: candidatesWithStatus
+    });
+  } catch (error) {
+    logger.error("Admin: list candidates failed", { 
+      error: error instanceof Error ? error.message : String(error) 
+    });
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Remove eligible candidate
+app.delete("/admin/candidates/:email", requireAdminKey, async (req, res) => {
+  const email = decodeURIComponent(req.params.email as string).toLowerCase();
+  
+  logger.info("Admin: remove eligible candidate requested", { email });
+
+  if (!isValidEmail(email)) {
+    return res.status(400).json({ error: "Invalid email format" });
+  }
+
+  try {
+    const db = await getDb();
+
+    const result = await db
+      .collection("eligible_candidates")
+      .deleteOne({ email });
+
+    if (result.deletedCount === 0) {
+      logger.warn("Admin: candidate not found for removal", { email });
+      return res.status(404).json({ error: "Candidate not found in eligible list" });
+    }
+
+    logger.info("Admin: eligible candidate removed", { email });
+    res.json({ message: "Candidate removed from eligible list", email });
+  } catch (error) {
+    logger.error("Admin: remove candidate failed", { 
+      error: error instanceof Error ? error.message : String(error) 
+    });
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Check if an email is eligible (useful for quick check)
+app.get("/admin/candidates/:email/status", requireAdminKey, async (req, res) => {
+  const email = decodeURIComponent(req.params.email as string).toLowerCase();
+  
+  logger.info("Admin: check candidate status requested", { email });
+
+  try {
+    const db = await getDb();
+
+    const eligible = await db
+      .collection("eligible_candidates")
+      .findOne({ email });
+
+    const assignment = await db
+      .collection("assignments")
+      .findOne({ email });
+
+    res.json({
+      email,
+      isEligible: !!eligible,
+      addedAt: eligible?.addedAt,
+      assignmentStatus: assignment?.status || "not_started",
+      startedAt: assignment?.startedAt,
+      endedAt: assignment?.endedAt
+    });
+  } catch (error) {
+    logger.error("Admin: check candidate status failed", { 
+      error: error instanceof Error ? error.message : String(error) 
+    });
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 /* ---------------- DEMO (No Auth Required) ---------------- */
