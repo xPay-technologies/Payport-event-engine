@@ -376,7 +376,7 @@ app.post("/test/mode", async (req, res) => {
 /* ---------------- ADMIN (Evaluator Only) ---------------- */
 
 // API Key authentication middleware for admin endpoints
-const ADMIN_API_KEY = process.env.ADMIN_API_KEY || "fdc5764c6675d8cbbf68d94148453aec47b41d73d0039e2459b14cfd6ac64d74";
+const ADMIN_API_KEY = process.env.ADMIN_API_KEY;
 
 const requireAdminKey = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const providedKey = req.headers["x-admin-api-key"] || req.headers["authorization"]?.replace("Bearer ", "");
